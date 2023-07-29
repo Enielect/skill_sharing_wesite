@@ -106,9 +106,24 @@ router.add('POST', /^\/talks\/[^\/]+\/comments$/, async (server, title, request)
         server.talks[title].comments.push(comment);
         server.updated();
         return { status: 204 };
-    } else { return { status: 404, body: 'No talk title found'} };
+    } else { return { status: 404, body: 'No talk title found' } };
 });
 
 //long polling support
 //there will be multiple places which we have to send an array of talks to the client
-//talkResponse is the helper function that does that
+//talkResponse is the helper function that does that (also contains the ETag header)
+
+SkillShareServer.prototype.talkResponse = function () {
+    let talks = [];
+    for (let title of Object.keys(this.talks)) {
+        talks.push(this.talks[title]);
+    }
+    return {
+        body: JSON.stringify(talks),
+        headers: {
+            'Content-Type': 'application/json',
+            'ETag': `${this.version}`,
+            'Cache-Control': 'no-store'
+        }
+    }
+}
