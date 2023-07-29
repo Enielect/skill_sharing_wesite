@@ -7,7 +7,7 @@ const Router = require('./router');
 const ecstatic = require('ecstatic');
 
 let router = new Router();
-let defaultHeaders = {'Content-Type': 'text/plain'}
+let defaultHeaders = { 'Content-Type': 'text/plain' }
 class SkillShareServer {
     constructor(talks) {
         this.talks = talks;
@@ -16,11 +16,11 @@ class SkillShareServer {
         let fileServer = ecstatic({ root: './Public' });
         this.server = createServer((request, response) => {
             let resolved = router.resolve(this, request);
-            if(resolved) {
+            if (resolved) {
                 resolved.catch(error => {
-                    if(error.status != null) throw error;
-                    else return {body: String(error), status: 500}; 
-                }).then(({body, status = 200, headers = defaultHeaders}) => {
+                    if (error.status != null) throw error;
+                    else return { body: String(error), status: 500 };
+                }).then(({ body, status = 200, headers = defaultHeaders }) => {
                     response.writeHead(status, headers);
                     response.end(body);
                 });
@@ -42,19 +42,19 @@ class SkillShareServer {
 //getting all talks from the talks objects which contain various talk titles
 const talkPath = /^\/talks\/[^\/]+$/;
 router.add('GET', talkPath, async (server, title) => {
-    if(title in server.talks) {
-        return {body: JSON.stringify(server.talks[title]), headers: {'Content-Type': 'application/json'}};
-    }else {
-        return {status: 404, body: `No talk ${title} found`};
+    if (title in server.talks) {
+        return { body: JSON.stringify(server.talks[title]), headers: { 'Content-Type': 'application/json' } };
+    } else {
+        return { status: 404, body: `No talk ${title} found` };
     }
 });
 
 router.add('DELETE', talkPath, async (server, title) => {
-    if(title in server.talks) {
+    if (title in server.talks) {
         delete server.talks[title];
         server.updated();
     }
-    return {status: 204};
+    return { status: 204 };
 });
 
 //retrieving content from a request body
@@ -73,36 +73,42 @@ function readStream(stream) {
 router.add('PUT', talkPath, async (server, title, request) => {
     let requestBody = await readStream(request);
     let talk;
-    try {talk = JSON.parse(requestBody);
-    } catch(_) { return {status: 400, body: 'Invalid JSON'}; }
+    try {
+        talk = JSON.parse(requestBody);
+    } catch (_) { return { status: 400, body: 'Invalid JSON' }; }
 
-    if(!talk || typeof talk.presenter != 'string' || typeof talk.summary != 'string') {
-        return {status: 400, body: 'Bad talk data'};
+    if (!talk || typeof talk.presenter != 'string' || typeof talk.summary != 'string') {
+        return { status: 400, body: 'Bad talk data' };
     }
-    server.talks[title] = {title,
+    server.talks[title] = {
+        title,
         presenter: talk.presenter,
         summary: talk.summary,
         comments: []
     };
     server.updated();
-    return {status: 204}
+    return { status: 204 }
 })
 
 //comments works in a similar way as 
 
-router.add('POST', /^\/talks\/[^\/]+\/comments$/, async(server, title, request) => {
+router.add('POST', /^\/talks\/[^\/]+\/comments$/, async (server, title, request) => {
     let requestBody = readStream(request);
     let comment;
     try {
         comment = JSON.parse(requestBody);
-    } catch(_) { return {status: 400, body: 'Invalid JSON' }};
+    } catch (_) { return { status: 400, body: 'Invalid JSON' }; };
 
-    if(!comment || typeof comment.author != 'string' ||
+    if (!comment || typeof comment.author != 'string' ||
         typeof comment.message != 'string') {
-            return {status: 400, body: 'Bad Talk data'}
-        }else if(title in server.talks) {
-            server.talks[title].comments.push(comment);
-            server.updated();
-            return {status: 204};
-        } else{ return {status: 404, body: 'No talk title'}}
-})
+        return { status: 400, body: 'Bad Talk data' }
+    } else if (title in server.talks) {
+        server.talks[title].comments.push(comment);
+        server.updated();
+        return { status: 204 };
+    } else { return { status: 404, body: 'No talk title found'} };
+});
+
+//long polling support
+//there will be multiple places which we have to send an array of talks to the client
+//talkResponse is the helper function that does that
