@@ -40,7 +40,7 @@ class SkillShareServer {
 
 
 //getting all talks from the talks objects which contain various talk titles
-talkPath = /^\/talks\/[^\/]+$/;
+const talkPath = /^\/talks\/[^\/]+$/;
 router.add('GET', talkPath, async (server, title) => {
     if(title in server.talks) {
         return {body: JSON.stringify(server.talks[title]), headers: {'Content-Type': 'application/json'}};
@@ -90,4 +90,19 @@ router.add('PUT', talkPath, async (server, title, request) => {
 
 //comments works in a similar way as 
 
-router.add('POST', /^\/talks\/[^\/]+\/comments$/)
+router.add('POST', /^\/talks\/[^\/]+\/comments$/, async(server, title, request) => {
+    let requestBody = readStream(request);
+    let comment;
+    try {
+        comment = JSON.parse(requestBody);
+    } catch(_) { return {status: 400, body: 'Invalid JSON' }};
+
+    if(!comment || typeof comment.author != 'string' ||
+        typeof comment.message != 'string') {
+            return {status: 400, body: 'Bad Talk data'}
+        }else if(title in server.talks) {
+            server.talks[title].comments.push(comment);
+            server.updated();
+            return {status: 204};
+        } else{ return {status: 404, body: 'No talk title'}}
+})
