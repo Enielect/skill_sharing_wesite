@@ -125,5 +125,17 @@ SkillShareServer.prototype.talkResponse = function () {
             'ETag': `${this.version}`,
             'Cache-Control': 'no-store'
         }
-    }
+    };
 }
+
+router.add('GET', /^\/talks$/, async (server, request) => {
+    let tag = /"(.*)"/.exec(request.headers['if-none-match']);
+    let wait = /\bwait=(\d+)/.exec(request.headers['prefer']);
+    if (!tag || tag[1] != server.version) {
+        return server.talkResponse();
+    } else if (!wait) {
+        return { status: 304 };
+    } else {
+        return server.waitForChanges(Number(wait[1]));
+    }
+});
