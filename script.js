@@ -40,7 +40,7 @@ class SkillShareServer {
 
 
 //getting all talks from the talks objects which contain various talk titles
-talkPath = /^\/talks\/[^\/]/;
+talkPath = /^\/talks\/[^\/]+$/;
 router.add('GET', talkPath, async (server, title) => {
     if(title in server.talks) {
         return {body: JSON.stringify(server.talks[title]), headers: {'Content-Type': 'application/json'}};
@@ -87,3 +87,7 @@ router.add('PUT', talkPath, async (server, title, request) => {
     server.updated();
     return {status: 204}
 })
+
+//comments works in a similar way as 
+
+router.add('POST', /^\/talks\/[^\/]+\/comments$/)
