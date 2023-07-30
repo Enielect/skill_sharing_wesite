@@ -211,3 +211,80 @@ function talkURL(title) {
 function reportError(error) {
     alert(String(error));
 }
+
+//rendering components
+
+function elt(node, properties, children) {
+    let dom = document.createElement(node);
+    for (let prop of Object.keys(properties)) {
+        Object.assign({}, dom, { prop: properties[prop] });
+    }
+    for (let child of children) {
+        if (child != 'string') dom.appendChild(child);
+        else dom.appendChild(document.createTextNode(child));
+    }
+    return dom;
+}
+
+function renderUserField(name, dispatch) {
+    return elt('label', {}, 'Your Name: ', elt('input', {
+        type: 'text',
+        value: name,
+        onchange(event) {
+            dispatch({ type: 'setUser', user: event.target.value })
+        }
+    }));
+}
+
+function renderTalk(talk, dispatch) {
+    return elt(
+        'section', { className: 'talk' },
+        elt('h2', null, talk.title, ' ', elt('button', {
+            type: 'button',
+            onclick() {
+                dispatch({ type: 'deleteTalk', talk: talk.title });
+            }
+        }, 'Delete')),
+        elt('div', null, 'by ',
+            elt('strong', null, talk.presenter)),
+        elt('p', null, talk.summary),
+        ...talk.comments.map(renderComment),
+        elt('form', {
+            onsubmit(event) {
+                event.preventDefault();
+                let form = event.target;
+                dispatch({
+                    type: 'newComment',
+                    talk: talk.title,
+                    message: form.elements.comment.value
+                });
+                form.reset();
+            }
+        }, elt('input', { type: 'text', name: 'comment' }), ' ',
+            elt('button', { type: 'submit' }, 'Add comment')));
+}
+
+function renderComment(comment) {
+    return elt('p', {className: 'comment'},
+            elt('strong', null, comment.author),
+            ': ', comment.message);
+}
+
+//form that user can use to create a new talk is rendered as below
+
+function renderTalkForm(dispatch) {
+    let title = elt('input', {type: 'text'});
+    let summary = elt('input', {type: 'text'});
+    return elt('form', {
+        onsubmit(event) {
+            event.preventDefault();
+            dispatch({type: 'newTalk',
+                        title: title.value,
+                        summary: summary.value});
+            event.target.reset();
+        }
+    }, elt('h3', null, 'Submit a Talk'),
+        elt('label', null, 'Title: ', title),
+        elt('label', null, 'Summary: ', summary),
+        elt('button', {type: 'submit'}, 'Submit'));
+}
