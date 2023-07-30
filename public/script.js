@@ -143,13 +143,13 @@ router.add('GET', /^\/talks$/, async (server, request) => {
 //callback functions for delayed request are stored in the server's waiting array so 
 //that they can be notified when something happens
 
-SkillShareServer.prototype.waitForChanges = function(time) {
+SkillShareServer.prototype.waitForChanges = function (time) {
     return new Promise(resolve => {
         this.waiting.push(resolve);
         setTimeout(() => {
-            if(!this.waiting.includes(resolve)) return;
+            if (!this.waiting.includes(resolve)) return;
             this.waiting = this.waiting.filter(r => r != resolve);
-            resolve({status: 304});
+            resolve({ status: 304 });
         }, time * 1000);
     });
 }
@@ -162,3 +162,52 @@ SkillShareServer.prototype.updated = function () {
 }
 
 new SkillShareServer(Object.create(null)).start(8080);
+
+//client
+//the application state consists of the list of talks and the name of the user
+
+function handleActions(state, action) {
+    if (action.type == 'setUser') {
+        localStorage.setItem('userName', action.user);
+        return Object.assign({}, state, { user: action.user });
+    } else if (action.type == 'setTalks') {
+        return Object.assign({}, state, { talks: action.talks });
+    } else if (action.type == 'newTalk') {
+        fetchOK(talkURL(action.title), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                presenter: state.user,
+                summary: action.summary
+            })
+        }).catch(reportError);
+    } else if (action.type == 'deleteTalk') {
+        fetchOK(talkURL(action.talk), { method: 'DELETE' })
+            .catch(reportError);
+    } else if (action.type == 'newComment') {
+        fetchOK(talkURL(action.talk) + '/comments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                author: state.user,
+                message: action.message
+            })
+        }).catch(reportError);
+    }
+    return state;
+}
+
+function fetchOK(url, option) {
+    return fetch(url, option).then(response => {
+        if (response.status < 400) return response;
+        else throw new Error(response.statusText);
+    });
+}
+
+function talkURL(title) {
+    return 'talks/' + encodeURIComponent(title);
+}
+
+function reportError(error) {
+    alert(String(error));
+}
