@@ -166,7 +166,7 @@ new SkillShareServer(Object.create(null)).start(8080);
 //client
 //the application state consists of the list of talks and the name of the user
 
-function handleActions(state, action) {
+function handleAction(state, action) {
     if (action.type == 'setUser') {
         localStorage.setItem('userName', action.user);
         return Object.assign({}, state, { user: action.user });
@@ -335,3 +335,24 @@ class SkillShareApp {
         }
     }
 }
+
+function runApp() {
+    let user = localStorage.getItem('userName') || 'Anon';
+    let state, app;
+    function dispatch(action) {
+        state = handleAction(state, action);
+        app.syncState(state);
+    }
+
+    pollTalks(talks => {
+        if(!app) {
+            state = {user, talks};
+            app = new SkillShareApp(state, dispatch);
+            document.body.appendChild(app.dom);
+        } else {
+            dispatch({type: 'setTalks', talks});
+        }
+    }).catch(reportError);
+}
+
+runApp();
